@@ -4,7 +4,7 @@ const badWords = [
   "hmar", "klb", "zbi", "9hab", "zaml",
   "scheisse", "arschloch", "hurensohn",
   "puta", "mierda", "gilipollas",
-  "orospu", "amk", "salak","ntm","tg","ftg","mok","97ba","9lawi","nam","ptn","3zwa","negero","l7wa","9ouwd","b9","w9","t9awd"
+  "orospu", "amk", "salak","ntm","tg","ftg","mok","97ba","9lawi","nam","ptn","3zwa","negero","l7wa","9ouwd","b9","w9","t9awd",
   ];
   function normalize(text) {
   return text
