@@ -1,6 +1,6 @@
 const { Client, GatewayIntentBits, PermissionsBitField, ChannelType } = require("discord.js");
 
-// 🧠 Liste des insultes (multi-langues)
+// 🧠 Liste des insultes
 const badWords = [
   "pute","connard","salope","fdp",
   "fuck","shit","bitch","asshole",
@@ -11,7 +11,7 @@ const badWords = [
   "ntm","tg","ftg","mok","97ba","9lawi","nam","ptn","3zwa","l7wa","9ouwd","b9","w9","t9awd"
 ];
 
-// 🔧 Normalisation (ignore accents, spam lettres, etc.)
+// 🔧 Normalisation
 function normalize(text) {
   return text
     .toLowerCase()
@@ -21,7 +21,7 @@ function normalize(text) {
     .replace(/(.)\1+/g, "$1");
 }
 
-// ⚙️ Création du bot
+// 🤖 Création du bot
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -30,28 +30,51 @@ const client = new Client({
   ]
 });
 
-// 🔴 ID de ton serveur (garde le tien)
+// 🔴 TON ID SERVEUR
 const GUILD_ID = "1487893628729823465";
 
 // ✅ Quand le bot démarre
 client.once("ready", async () => {
-  console.log("Bot FULL PRO MAX 🔥");
+  console.log("Bot en ligne 🔥");
 
   await client.application.commands.set([
+    { name: "ping", description: "Test du bot" },
+    { name: "ticket", description: "Créer un ticket" },
     {
-      name: "ping",
-      description: "Test du bot"
+      name: "ban",
+      description: "Bannir un membre",
+      options: [{
+        name: "user",
+        type: 6,
+        description: "Utilisateur",
+        required: true
+      }]
     },
     {
-      name: "ticket",
-      description: "Créer un ticket support"
+      name: "kick",
+      description: "Expulser un membre",
+      options: [{
+        name: "user",
+        type: 6,
+        description: "Utilisateur",
+        required: true
+      }]
+    },
+    {
+      name: "mute",
+      description: "Mute un membre",
+      options: [{
+        name: "user",
+        type: 6,
+        description: "Utilisateur",
+        required: true
+      }]
     }
   ], GUILD_ID);
 });
 
-// ⚡ Commandes slash
+// ⚡ Commandes
 client.on("interactionCreate", async (interaction) => {
-  client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
   // 🏓 Ping
@@ -106,7 +129,7 @@ client.on("interactionCreate", async (interaction) => {
     return interaction.reply(`👢 ${user.tag} a été expulsé`);
   }
 
-  // 🔇 MUTE
+  // 🔇 MUTE (10 min)
   if (interaction.commandName === "mute") {
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
       return interaction.reply("❌ Pas la permission");
@@ -119,34 +142,8 @@ client.on("interactionCreate", async (interaction) => {
     return interaction.reply(`🔇 ${user.tag} a été mute 10 minutes`);
   }
 });
-  // 🏓 Ping
-  if (interaction.commandName === "ping") {
-    return interaction.reply("pong 🏓");
-  }
 
-  // 🎫 Ticket
-  if (interaction.commandName === "ticket") {
-    const channel = await interaction.guild.channels.create({
-      name: `ticket-${interaction.user.username}`,
-      type: ChannelType.GuildText,
-      permissionOverwrites: [
-        {
-          id: interaction.guild.id,
-          deny: [PermissionsBitField.Flags.ViewChannel]
-        },
-        {
-          id: interaction.user.id,
-          allow: [PermissionsBitField.Flags.ViewChannel]
-        }
-      ]
-    });
-
-    await channel.send(`🎫 Ticket ouvert par ${interaction.user}`);
-    interaction.reply({ content: "✅ Ticket créé !", ephemeral: true });
-  }
-});
-
-// 🚫 Détection insultes
+// 🚫 Anti-insultes
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
@@ -157,52 +154,6 @@ client.on("messageCreate", async (message) => {
     message.channel.send(`${message.author} 🚫 langage interdit`);
   }
 });
-  await client.application.commands.set([
-  {
-    name: "ping",
-    description: "Test du bot"
-  },
-  {
-    name: "ticket",
-    description: "Créer un ticket support"
-  },
-  {
-    name: "ban",
-    description: "Bannir un membre",
-    options: [
-      {
-        name: "user",
-        type: 6,
-        description: "Utilisateur",
-        required: true
-      }
-    ]
-  },
-  {
-    name: "kick",
-    description: "Expulser un membre",
-    options: [
-      {
-        name: "user",
-        type: 6,
-        description: "Utilisateur",
-        required: true
-      }
-    ]
-  },
-  {
-    name: "mute",
-    description: "Mute un membre",
-    options: [
-      {
-        name: "user",
-        type: 6,
-        description: "Utilisateur",
-        required: true
-      }
-    ]
-  }
-], GUILD_ID);
 
-// 🔐 Connexion
+// 🔑 Connexion
 client.login(process.env.TOKEN);
