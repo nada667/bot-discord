@@ -34,7 +34,7 @@ client.once("ready", async () => {
     {
       name: "ping",
       description: "Test du bot"
-    }
+    },
     {
       name: "ticket",
       description: "Créer un ticket support"
@@ -70,6 +70,7 @@ client.on("interactionCreate", async (interaction) => {
 
     await channel.send(`🎫 Ticket ouvert par ${interaction.user}`);
     interaction.reply({ content: "✅ Ticket créé !", ephemeral: true });
+});    
   }
 });
 client.on("messageCreate", async (message) => {
