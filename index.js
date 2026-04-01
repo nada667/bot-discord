@@ -1,10 +1,12 @@
+const { Client, GatewayIntentBits, PermissionsBitField, ChannelType } = require("discord.js");
+
 const badWords = [
-  "pute", "connard", "salope", "fdp",
-  "fuck", "shit", "bitch", "asshole",
-  "hmar", "klb", "zbi", "9hab", "zaml",
-  "scheisse", "arschloch", "hurensohn",
-  "puta", "mierda", "gilipollas",
-  "orospu", "amk", "salak","ntm","tg","ftg","mok","97ba","9lawi","nam","ptn","3zwa","negero","l7wa","9ouwd",
+  "pute","connard","salope","fdp",
+  "fuck","shit","bitch","asshole",
+  "hmar","klb","zbi","9hab","zaml",
+  "scheisse","arschloch","hurensohn",
+  "puta","mierda","gilipollas",
+  "orospu","amk","salak","ntm","tg","ftg","mok","97ba","9lawi","nam","ptn","3zwa","negero","l7wa","9ouwd","b9","w9","t9awd"
 ];
 
 function normalize(text) {
@@ -75,14 +77,13 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 client.on("messageCreate", async (message) => {
- 
-    client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
-  console.log("MESSAGE REÇU :", message.content);
+  const content = normalize(message.content);
 
-  message.channel.send("Je vois ton message 👀");
-});
+  if (badWords.some(word => content.includes(word))) {
+    await message.delete().catch(() => {});
+    message.channel.send(`${message.author} 🚫 langage interdit`);
   }
 });
 client.login(process.env.TOKEN);
