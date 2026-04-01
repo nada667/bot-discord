@@ -34,7 +34,7 @@ client.once("ready", async () => {
     {
       name: "ping",
       description: "Test du bot"
-    },
+    }
     {
       name: "ticket",
       description: "Créer un ticket support"
