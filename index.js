@@ -51,8 +51,38 @@ client.once("ready", async () => {
 
 // ⚡ Commandes slash
 client.on("interactionCreate", async (interaction) => {
-  if (!interaction.isChatInputCommand()) return;
+  if (interaction.commandName === "ban") {
+  if (!interaction.member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
+    return interaction.reply("❌ Pas la permission");
+  }
 
+  const user = interaction.options.getUser("user");
+  const member = interaction.guild.members.cache.get(user.id);
+
+  await member.ban();
+  interaction.reply(`🔨 ${user.tag} a été banni`);
+  if (!interaction.isChatInputCommand()) return;
+    if (interaction.commandName === "kick") {
+  if (!interaction.member.permissions.has(PermissionsBitField.Flags.KickMembers)) {
+    return interaction.reply("❌ Pas la permission");
+  }
+
+  const user = interaction.options.getUser("user");
+  const member = interaction.guild.members.cache.get(user.id);
+
+  await member.kick();
+  interaction.reply(`👢 ${user.tag} a été expulsé`);
+      if (interaction.commandName === "mute") {
+  if (!interaction.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
+    return interaction.reply("❌ Pas la permission");
+  }
+
+  const user = interaction.options.getUser("user");
+  const member = interaction.guild.members.cache.get(user.id);
+
+  await member.timeout(10 * 60 * 1000); // 10 minutes
+  interaction.reply(`🔇 ${user.tag} a été mute 10 minutes`);
+}
   // 🏓 Ping
   if (interaction.commandName === "ping") {
     return interaction.reply("pong 🏓");
@@ -91,6 +121,52 @@ client.on("messageCreate", async (message) => {
     message.channel.send(`${message.author} 🚫 langage interdit`);
   }
 });
+  await client.application.commands.set([
+  {
+    name: "ping",
+    description: "Test du bot"
+  },
+  {
+    name: "ticket",
+    description: "Créer un ticket support"
+  },
+  {
+    name: "ban",
+    description: "Bannir un membre",
+    options: [
+      {
+        name: "user",
+        type: 6,
+        description: "Utilisateur",
+        required: true
+      }
+    ]
+  },
+  {
+    name: "kick",
+    description: "Expulser un membre",
+    options: [
+      {
+        name: "user",
+        type: 6,
+        description: "Utilisateur",
+        required: true
+      }
+    ]
+  },
+  {
+    name: "mute",
+    description: "Mute un membre",
+    options: [
+      {
+        name: "user",
+        type: 6,
+        description: "Utilisateur",
+        required: true
+      }
+    ]
+  }
+], GUILD_ID);
 
 // 🔐 Connexion
 client.login(process.env.TOKEN);
