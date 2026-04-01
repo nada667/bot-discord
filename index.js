@@ -1,5 +1,20 @@
+const badWords = [
+  "pute", "connard", "salope", "fdp",
+  "fuck", "shit", "bitch", "asshole",
+  "hmar", "klb", "zbi", "9hab", "zaml",
+  "scheisse", "arschloch", "hurensohn",
+  "puta", "mierda", "gilipollas",
+  "orospu", "amk", "salak","ntm","tg","ftg","mok","97ba","9lawi","nam","ptn","3zwa","negero","l7wa","9ouwd","b9","w9","t9awd"
+  ];
+  function normalize(text) {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "")
+    .replace(/(.)\1+/g, "$1");
 const { Client, GatewayIntentBits, PermissionsBitField, ChannelType } = require("discord.js");
-
+}
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -57,5 +72,11 @@ client.on("interactionCreate", async (interaction) => {
     interaction.reply({ content: "✅ Ticket créé !", ephemeral: true });
   }
 });
+client.on("messageCreate", async (message) => {
+  if (message.author.bot) return;
 
+  console.log("MESSAGE REÇU :", message.content);
+
+  message.channel.send("Je vois ton message 👀");
+});
 client.login(process.env.TOKEN);
