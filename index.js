@@ -70,8 +70,6 @@ client.on("interactionCreate", async (interaction) => {
 
     await channel.send(`🎫 Ticket ouvert par ${interaction.user}`);
     interaction.reply({ content: "✅ Ticket créé !", ephemeral: true });
-});    
-  }
 });
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
