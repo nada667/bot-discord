@@ -1,14 +1,17 @@
 const { Client, GatewayIntentBits, PermissionsBitField, ChannelType } = require("discord.js");
 
+// 🧠 Liste des insultes (multi-langues)
 const badWords = [
   "pute","connard","salope","fdp",
   "fuck","shit","bitch","asshole",
   "hmar","klb","zbi","9hab","zaml",
   "scheisse","arschloch","hurensohn",
   "puta","mierda","gilipollas",
-  "orospu","amk","salak","ntm","tg","ftg","mok","97ba","9lawi","nam","ptn","3zwa","negero","l7wa","9ouwd","b9","w9","t9awd"
+  "orospu","amk","salak",
+  "ntm","tg","ftg","mok","97ba","9lawi","nam","ptn","3zwa","l7wa","9ouwd","b9","w9","t9awd"
 ];
 
+// 🔧 Normalisation (ignore accents, spam lettres, etc.)
 function normalize(text) {
   return text
     .toLowerCase()
@@ -17,8 +20,8 @@ function normalize(text) {
     .replace(/[^a-z0-9]/g, "")
     .replace(/(.)\1+/g, "$1");
 }
-const { Client, GatewayIntentBits, PermissionsBitField, ChannelType } = require("discord.js");
 
+// ⚙️ Création du bot
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -27,13 +30,13 @@ const client = new Client({
   ]
 });
 
-// 🔴 ID du serveur (important)
+// 🔴 ID de ton serveur (garde le tien)
 const GUILD_ID = "1487893628729823465";
 
+// ✅ Quand le bot démarre
 client.once("ready", async () => {
   console.log("Bot FULL PRO MAX 🔥");
 
-  // 🔧 Créer commandes slash
   await client.application.commands.set([
     {
       name: "ping",
@@ -46,7 +49,7 @@ client.once("ready", async () => {
   ], GUILD_ID);
 });
 
-// ⚡ COMMANDES SLASH
+// ⚡ Commandes slash
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
@@ -76,6 +79,8 @@ client.on("interactionCreate", async (interaction) => {
     interaction.reply({ content: "✅ Ticket créé !", ephemeral: true });
   }
 });
+
+// 🚫 Détection insultes
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
@@ -86,4 +91,6 @@ client.on("messageCreate", async (message) => {
     message.channel.send(`${message.author} 🚫 langage interdit`);
   }
 });
+
+// 🔐 Connexion
 client.login(process.env.TOKEN);
