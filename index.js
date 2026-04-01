@@ -51,38 +51,74 @@ client.once("ready", async () => {
 
 // ⚡ Commandes slash
 client.on("interactionCreate", async (interaction) => {
-  if (interaction.commandName === "ban") {
-  if (!interaction.member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
-    return interaction.reply("❌ Pas la permission");
-  }
-
-  const user = interaction.options.getUser("user");
-  const member = interaction.guild.members.cache.get(user.id);
-
-  await member.ban();
-  interaction.reply(`🔨 ${user.tag} a été banni`);
+  client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
-    if (interaction.commandName === "kick") {
-  if (!interaction.member.permissions.has(PermissionsBitField.Flags.KickMembers)) {
-    return interaction.reply("❌ Pas la permission");
+
+  // 🏓 Ping
+  if (interaction.commandName === "ping") {
+    return interaction.reply("pong 🏓");
   }
 
-  const user = interaction.options.getUser("user");
-  const member = interaction.guild.members.cache.get(user.id);
+  // 🎫 Ticket
+  if (interaction.commandName === "ticket") {
+    const channel = await interaction.guild.channels.create({
+      name: `ticket-${interaction.user.username}`,
+      type: ChannelType.GuildText,
+      permissionOverwrites: [
+        {
+          id: interaction.guild.id,
+          deny: [PermissionsBitField.Flags.ViewChannel]
+        },
+        {
+          id: interaction.user.id,
+          allow: [PermissionsBitField.Flags.ViewChannel]
+        }
+      ]
+    });
 
-  await member.kick();
-  interaction.reply(`👢 ${user.tag} a été expulsé`);
-      if (interaction.commandName === "mute") {
-  if (!interaction.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
-    return interaction.reply("❌ Pas la permission");
+    await channel.send(`🎫 Ticket ouvert par ${interaction.user}`);
+    return interaction.reply({ content: "✅ Ticket créé !", ephemeral: true });
   }
 
-  const user = interaction.options.getUser("user");
-  const member = interaction.guild.members.cache.get(user.id);
+  // 🔨 BAN
+  if (interaction.commandName === "ban") {
+    if (!interaction.member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
+      return interaction.reply("❌ Pas la permission");
+    }
 
-  await member.timeout(10 * 60 * 1000); // 10 minutes
-  interaction.reply(`🔇 ${user.tag} a été mute 10 minutes`);
-}
+    const user = interaction.options.getUser("user");
+    const member = interaction.guild.members.cache.get(user.id);
+
+    await member.ban();
+    return interaction.reply(`🔨 ${user.tag} a été banni`);
+  }
+
+  // 👢 KICK
+  if (interaction.commandName === "kick") {
+    if (!interaction.member.permissions.has(PermissionsBitField.Flags.KickMembers)) {
+      return interaction.reply("❌ Pas la permission");
+    }
+
+    const user = interaction.options.getUser("user");
+    const member = interaction.guild.members.cache.get(user.id);
+
+    await member.kick();
+    return interaction.reply(`👢 ${user.tag} a été expulsé`);
+  }
+
+  // 🔇 MUTE
+  if (interaction.commandName === "mute") {
+    if (!interaction.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
+      return interaction.reply("❌ Pas la permission");
+    }
+
+    const user = interaction.options.getUser("user");
+    const member = interaction.guild.members.cache.get(user.id);
+
+    await member.timeout(10 * 60 * 1000);
+    return interaction.reply(`🔇 ${user.tag} a été mute 10 minutes`);
+  }
+});
   // 🏓 Ping
   if (interaction.commandName === "ping") {
     return interaction.reply("pong 🏓");
