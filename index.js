@@ -146,30 +146,32 @@ client.on("interactionCreate", async (interaction) => {
 // 🚫 Anti-insultes
 let warns = {};
 client.on("messageCreate", async (message) => {
-  if (message.member.permissions.has("Administrator")) return;
   if (message.author.bot) return;
 
   const content = normalize(message.content);
 
   if (badWords.some(word => content.includes(word))) {
 
+    // 🔴 SUPPRIME TOUJOURS D'ABORD
     await message.delete().catch(() => {});
 
-    // ➜ ajouter warn
+    // ➜ warn
     if (!warns[message.author.id]) warns[message.author.id] = 0;
     warns[message.author.id]++;
 
-    message.channel.send(`⚠️ ${message.author} (${warns[message.author.id]}/3)`);
-
-    // ➜ sanction automatique
+    // ➜ si 3 warns = mute
     if (warns[message.author.id] >= 3) {
       const member = message.guild.members.cache.get(message.author.id);
 
-      await member.timeout(5 * 60 * 1000); // 5 minutes
-      message.channel.send(`🔇 ${message.author.tag} a été mute 5 min`);
+      await member.timeout(5 * 60 * 1000).catch(() => {});
+      message.channel.send(`🔇 ${message.author.tag} mute 5 min`);
 
       warns[message.author.id] = 0;
+      return; // 🔥 IMPORTANT (stop ici)
     }
+
+    // ➜ sinon warn normal
+    message.channel.send(`⚠️ ${message.author} (${warns[message.author.id]}/3)`);
   }
 });
 // 🔑 Connexion
