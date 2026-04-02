@@ -1,22 +1,27 @@
-const {
-  Client,
-  GatewayIntentBits,
-  PermissionsBitField,
-  ChannelType,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle
-} = require("discord.js");
+const { Client, GatewayIntentBits, PermissionsBitField, ChannelType } = require("discord.js");
 
-// 🔴 CONFIG
-const GUILD_ID = "1487893628729823465";
-const CATEGORY_ID = "1489322302238625994"; // ⚠️ MET ICI TON ID
+// 🧠 Liste des insultes
+const badWords = [
+  "pute","connard","salope","fdp",
+  "fuck","shit","bitch","asshole",
+  "hmar","klb","zbi","9hab","zaml",
+  "scheisse","arschloch","hurensohn",
+  "puta","mierda","gilipollas",
+  "orospu","amk","salak",
+  "ntm","tg","ftg","mok","97ba","9lawi","nam","ptn","3zwa","l7wa","9ouwd","b9","w9","t9awd"
+];
 
-// 🧠 DATA
-let warns = {};
-let spam = {};
+// 🔧 Normalisation
+function normalize(text) {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "")
+    .replace(/(.)\1+/g, "$1");
+}
 
-// 🤖 BOT
+// 🤖 Création du bot
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -25,55 +30,63 @@ const client = new Client({
   ]
 });
 
-// ✅ READY
+// 🔴 TON ID SERVEUR
+const GUILD_ID = "1487893628729823465";
+
+// ✅ Quand le bot démarre
 client.once("ready", async () => {
-  console.log("🔥 Bot en ligne");
+  console.log("Bot en ligne 🔥");
 
   await client.application.commands.set([
-    { name: "ping", description: "Test" },
-    { name: "panel", description: "Créer panel ticket" }
+    { name: "ping", description: "Test du bot" },
+    { name: "ticket", description: "Créer un ticket" },
+    {
+      name: "ban",
+      description: "Bannir un membre",
+      options: [{
+        name: "user",
+        type: 6,
+        description: "Utilisateur",
+        required: true
+      }]
+    },
+    {
+      name: "kick",
+      description: "Expulser un membre",
+      options: [{
+        name: "user",
+        type: 6,
+        description: "Utilisateur",
+        required: true
+      }]
+    },
+    {
+      name: "mute",
+      description: "Mute un membre",
+      options: [{
+        name: "user",
+        type: 6,
+        description: "Utilisateur",
+        required: true
+      }]
+    }
   ], GUILD_ID);
 });
 
-// ⚡ INTERACTIONS
+// ⚡ Commandes
 client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isChatInputCommand()) return;
 
-  // 🧾 COMMANDES
-  if (interaction.isChatInputCommand()) {
-
-    if (interaction.commandName === "ping") {
-      return interaction.reply("🏓 Pong");
-    }
-
-    // 🎫 Panel
-    if (interaction.commandName === "panel") {
-
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId("open_ticket")
-          .setLabel("🎫 Ouvrir un ticket")
-          .setStyle(ButtonStyle.Primary)
-      );
-
-      return interaction.reply({
-        content: "🎫 Clique pour ouvrir un ticket",
-        components: [row]
-      });
-    }
+  // 🏓 Ping
+  if (interaction.commandName === "ping") {
+    return interaction.reply("pong 🏓");
   }
 
-  // 🎟️ BOUTON TICKET
-if (interaction.isButton()) {
-
-  if (interaction.customId === "open_ticket") {
-
-    // 🔒 éviter spam
-    await interaction.deferReply({ ephemeral: true });
-
+  // 🎫 Ticket
+  if (interaction.commandName === "ticket") {
     const channel = await interaction.guild.channels.create({
       name: `ticket-${interaction.user.username}`,
       type: ChannelType.GuildText,
-      parent: "1489322177869119558", // ⚠️ IMPORTANT
       permissionOverwrites: [
         {
           id: interaction.guild.id,
@@ -87,17 +100,60 @@ if (interaction.isButton()) {
     });
 
     await channel.send(`🎫 Ticket ouvert par ${interaction.user}`);
-
-    await interaction.editReply("✅ Ticket créé !");
+    return interaction.reply({ content: "✅ Ticket créé !", ephemeral: true });
   }
 
-  // 🔴 BOUTON FERMER
-  if (interaction.customId === "close_ticket") {
-    await interaction.reply({ content: "❌ Ticket fermé", ephemeral: true });
-    setTimeout(() => {
-      interaction.channel.delete().catch(() => {});
-    }, 2000);
+  // 🔨 BAN
+  if (interaction.commandName === "ban") {
+    if (!interaction.member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
+      return interaction.reply("❌ Pas la permission");
+    }
+
+    const user = interaction.options.getUser("user");
+    const member = interaction.guild.members.cache.get(user.id);
+
+    await member.ban();
+    return interaction.reply(`🔨 ${user.tag} a été banni`);
   }
-}
-// 🔑 LOGIN
+
+  // 👢 KICK
+  if (interaction.commandName === "kick") {
+    if (!interaction.member.permissions.has(PermissionsBitField.Flags.KickMembers)) {
+      return interaction.reply("❌ Pas la permission");
+    }
+
+    const user = interaction.options.getUser("user");
+    const member = interaction.guild.members.cache.get(user.id);
+
+    await member.kick();
+    return interaction.reply(`👢 ${user.tag} a été expulsé`);
+  }
+
+  // 🔇 MUTE (10 min)
+  if (interaction.commandName === "mute") {
+    if (!interaction.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
+      return interaction.reply("❌ Pas la permission");
+    }
+
+    const user = interaction.options.getUser("user");
+    const member = interaction.guild.members.cache.get(user.id);
+
+    await member.timeout(10 * 60 * 1000);
+    return interaction.reply(`🔇 ${user.tag} a été mute 10 minutes`);
+  }
+});
+
+// 🚫 Anti-insultes
+client.on("messageCreate", async (message) => {
+  if (message.author.bot) return;
+
+  const content = normalize(message.content);
+
+  if (badWords.some(word => content.includes(word))) {
+    await message.delete().catch(() => {});
+    message.channel.send(`${message.author} 🚫 langage interdit`);
+  }
+});
+
+// 🔑 Connexion
 client.login(process.env.TOKEN);
