@@ -37,41 +37,22 @@ const GUILD_ID = "1487893628729823465";
 client.once("ready", async () => {
   console.log("Bot en ligne 🔥");
 
-  await client.application.commands.set([
-    { name: "ping", description: "Test du bot" },
-    { name: "ticket", description: "Créer un ticket" },
-    {
-      name: "ban",
-      description: "Bannir un membre",
-      options: [{
+ await client.application.commands.set([
+  { name: "ping", description: "Test" },
+  { name: "ticket", description: "Créer ticket" },
+  {
+    name: "warn",
+    description: "Warn un membre",
+    options: [
+      {
         name: "user",
         type: 6,
         description: "Utilisateur",
         required: true
-      }]
-    },
-    {
-      name: "kick",
-      description: "Expulser un membre",
-      options: [{
-        name: "user",
-        type: 6,
-        description: "Utilisateur",
-        required: true
-      }]
-    },
-    {
-      name: "mute",
-      description: "Mute un membre",
-      options: [{
-        name: "user",
-        type: 6,
-        description: "Utilisateur",
-        required: true
-      }]
-    }
-  ], GUILD_ID);
-});
+      }
+    ]
+  }
+], GUILD_ID);
 
 // ⚡ Commandes
 client.on("interactionCreate", async (interaction) => {
