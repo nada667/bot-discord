@@ -52,8 +52,7 @@ client.once("ready", async () => {
       }
     ]
   }
-],1487893628729823465);
-
+], GUILD_ID);
 // ⚡ Commandes
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
