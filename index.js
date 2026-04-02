@@ -8,28 +8,25 @@ const {
   ButtonStyle
 } = require("discord.js");
 
-// 🧠 Liste insultes
-const badWords = [
-  "pute","connard","salope","fdp",
-  "fuck","shit","bitch","asshole",
-  "hmar","klb","zbi","9hab","zaml",
-  "scheisse","arschloch","hurensohn",
-  "puta","mierda","gilipollas",
-  "orospu","amk","salak",
-  "ntm","tg","ftg","mok","97ba","9lawi","nam","ptn","3zwa","l7wa","9ouwd","b9","w9","t9awd"
-];
+// 🔴 CONFIG
+const GUILD_ID = "1487893628729823465";
+const CATEGORY_ID = "1489322177869119558";
+const STAFF_ROLE_ID = "1487912329046654986";
+const LOG_CHANNEL_ID = "1488911081639379116";
 
-// 🔧 Normalisation
+// 🧠 insultes
+const badWords = ["pute","connard","salope","fdp","fuck","shit","bitch","asshole","zbi","ntm","tg","ftg"];
+
+// 🔧 normalisation
 function normalize(text) {
-  return text
-    .toLowerCase()
+  return text.toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]/g, "")
     .replace(/(.)\1+/g, "$1");
 }
 
-// 🤖 Bot
+// 🤖 bot
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -38,29 +35,23 @@ const client = new Client({
   ]
 });
 
-// 🔴 TON ID SERVEUR
-const GUILD_ID = "1487893628729823465";
-
-// 🔴 ID CATEGORIE TICKET (REMPLACE)
-const CATEGORY_ID = "MET_ICI_ID_CATEGORIE";
-
-// ⚠️ système warn
+// 📊 stockage
 let warns = {};
+let spam = {};
 
 // ✅ READY
 client.once("ready", async () => {
-  console.log("Bot en ligne 🔥");
+  console.log("🔥 Bot PRO MAX actif");
 
   await client.application.commands.set([
     { name: "ping", description: "Test" },
-    { name: "panel", description: "Créer le panel ticket" }
+    { name: "panel", description: "Créer panel ticket" }
   ], GUILD_ID);
 });
 
-// ⚡ INTERACTIONS
+// ⚡ INTERACTION
 client.on("interactionCreate", async (interaction) => {
 
-  // 📌 SLASH COMMANDES
   if (interaction.isChatInputCommand()) {
 
     if (interaction.commandName === "ping") {
@@ -83,10 +74,9 @@ client.on("interactionCreate", async (interaction) => {
     }
   }
 
-  // 🎟️ BOUTONS
   if (interaction.isButton()) {
 
-    // 🔓 OUVRIR
+    // 🎫 ouvrir ticket
     if (interaction.customId === "open_ticket") {
 
       await interaction.deferReply({ ephemeral: true });
@@ -103,6 +93,10 @@ client.on("interactionCreate", async (interaction) => {
           {
             id: interaction.user.id,
             allow: [PermissionsBitField.Flags.ViewChannel]
+          },
+          {
+            id: STAFF_ROLE_ID,
+            allow: [PermissionsBitField.Flags.ViewChannel]
           }
         ]
       });
@@ -115,16 +109,23 @@ client.on("interactionCreate", async (interaction) => {
       );
 
       await channel.send({
-        content: `🎫 Ticket de ${interaction.user}`,
+        content: `🎫 ${interaction.user} | Support en attente`,
         components: [row]
       });
+
+      // 📊 log
+      const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL_ID);
+      if (logChannel) logChannel.send(`📩 Ticket créé par ${interaction.user.tag}`);
 
       return interaction.editReply("✅ Ticket créé !");
     }
 
-    // 🔒 FERMER
+    // ❌ fermer
     if (interaction.customId === "close_ticket") {
       await interaction.reply({ content: "❌ Fermeture...", ephemeral: true });
+
+      const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL_ID);
+      if (logChannel) logChannel.send(`❌ Ticket fermé par ${interaction.user.tag}`);
 
       setTimeout(() => {
         interaction.channel.delete().catch(() => {});
@@ -133,38 +134,57 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-// 🚫 ANTI-INSULTES + WARN + MUTE
+// 🚫 messages
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
+  const userId = message.author.id;
+
+  // 🔥 ANTI SPAM
+  if (!spam[userId]) spam[userId] = { count: 0, time: Date.now() };
+
+  spam[userId].count++;
+
+  if (spam[userId].count > 5 && Date.now() - spam[userId].time < 5000) {
+    await message.delete().catch(() => {});
+    return;
+  }
+
+  setTimeout(() => {
+    spam[userId].count = 0;
+    spam[userId].time = Date.now();
+  }, 5000);
+
+  // 🚫 insultes
   const content = normalize(message.content);
 
   if (badWords.some(word => content.includes(word))) {
 
-    // ❌ supprime message
     await message.delete().catch(() => {});
 
-    // warn
-    if (!warns[message.author.id]) warns[message.author.id] = 0;
-    warns[message.author.id]++;
+    if (!warns[userId]) warns[userId] = 0;
+    warns[userId]++;
 
-    // message temporaire
-    message.channel.send(`⚠️ ${message.author} (${warns[message.author.id]}/3)`)
+    message.channel.send(`⚠️ ${message.author} (${warns[userId]}/3)`)
       .then(msg => setTimeout(() => msg.delete().catch(()=>{}), 3000));
 
-    // 🔇 mute si 3 warns
-    if (warns[message.author.id] >= 3) {
-      const member = message.guild.members.cache.get(message.author.id);
+    const logChannel = message.guild.channels.cache.get(LOG_CHANNEL_ID);
+    if (logChannel) logChannel.send(`🚫 Insulte détectée: ${message.author.tag}`);
+
+    if (warns[userId] >= 3) {
+      const member = message.guild.members.cache.get(userId);
 
       if (member) {
         await member.timeout(5 * 60 * 1000).catch(() => {});
         message.channel.send(`🔇 ${message.author.tag} mute 5 min`);
+
+        if (logChannel) logChannel.send(`🔇 ${message.author.tag} a été mute`);
       }
 
-      warns[message.author.id] = 0;
+      warns[userId] = 0;
     }
   }
 });
 
-// 🔑 TOKEN (MET TON TOKEN ICI)
-client.login("TON_TOKEN_ICI");
+// 🔑 login
+client.login(process.env.TOKEN);
