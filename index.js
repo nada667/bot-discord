@@ -45,8 +45,8 @@ client.on("interactionCreate", async (interaction) => {
       return interaction.reply("🏓 Pong");
     }
 
-    // 🎫 Ticket
-    if (interaction.commandName === "ticket") {
+    // 🎫 Panel
+    if (interaction.commandName === "panel") {
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
