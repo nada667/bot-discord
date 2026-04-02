@@ -62,66 +62,42 @@ client.on("interactionCreate", async (interaction) => {
     }
   }
 
-  // 🔘 BOUTONS
-  if (interaction.isButton()) {
+  // 🎟️ BOUTON TICKET
+if (interaction.isButton()) {
 
-    // 🎫 OUVRIR
-    if (interaction.customId === "open_ticket") {
+  if (interaction.customId === "open_ticket") {
 
-      const channel = await interaction.guild.channels.create({
-        name: `ticket-${interaction.user.username}`,
-        type: ChannelType.GuildText,
-        parent: CATEGORY_ID,
-        permissionOverwrites: [
-          { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-          { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] }
-        ]
-      });
+    // 🔒 éviter spam
+    await interaction.deferReply({ ephemeral: true });
 
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId("claim_ticket")
-          .setLabel("✅ Prendre")
-          .setStyle(ButtonStyle.Success),
+    const channel = await interaction.guild.channels.create({
+      name: `ticket-${interaction.user.username}`,
+      type: ChannelType.GuildText,
+      parent: "1489322177869119558", // ⚠️ IMPORTANT
+      permissionOverwrites: [
+        {
+          id: interaction.guild.id,
+          deny: [PermissionsBitField.Flags.ViewChannel]
+        },
+        {
+          id: interaction.user.id,
+          allow: [PermissionsBitField.Flags.ViewChannel]
+        }
+      ]
+    });
 
-        new ButtonBuilder()
-          .setCustomId("close_ticket")
-          .setLabel("❌ Fermer")
-          .setStyle(ButtonStyle.Danger)
-      );
+    await channel.send(`🎫 Ticket ouvert par ${interaction.user}`);
 
-      channel.send({
-        content: `🎫 Ticket de ${interaction.user}`,
-        components: [row]
-      });
-
-      return interaction.reply({ content: "✅ Ticket créé", ephemeral: true });
-    }
-
-    // ✅ PRENDRE
-    if (interaction.customId === "claim_ticket") {
-
-      if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
-        return interaction.reply({ content: "❌ Staff seulement", ephemeral: true });
-      }
-
-      return interaction.reply(`✅ ${interaction.user} a pris le ticket`);
-    }
-
-    // ❌ FERMER
-    if (interaction.customId === "close_ticket") {
-
-      if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
-        return interaction.reply({ content: "❌ Staff seulement", ephemeral: true });
-      }
-
-      await interaction.reply("🔒 Fermeture...");
-      setTimeout(() => {
-        interaction.channel.delete().catch(() => {});
-      }, 2000);
-    }
+    await interaction.editReply("✅ Ticket créé !");
   }
-});
 
+  // 🔴 BOUTON FERMER
+  if (interaction.customId === "close_ticket") {
+    await interaction.reply({ content: "❌ Ticket fermé", ephemeral: true });
+    setTimeout(() => {
+      interaction.channel.delete().catch(() => {});
+    }, 2000);
+  }
+}
 // 🔑 LOGIN
 client.login(process.env.TOKEN);
