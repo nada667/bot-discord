@@ -10,7 +10,7 @@ const {
 
 // 🔴 CONFIG
 const GUILD_ID = "1487893628729823465";
-const CATEGORY_ID = "MET_ID_CATEGORIE"; // ⚠️ MET ICI TON ID
+const CATEGORY_ID = "1489322302238625994"; // ⚠️ MET ICI TON ID
 
 // 🧠 DATA
 let warns = {};
