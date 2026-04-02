@@ -52,7 +52,7 @@ client.once("ready", async () => {
       }
     ]
   }
-], GUILD_ID);
+],1487893628729823465);
 
 // ⚡ Commandes
 client.on("interactionCreate", async (interaction) => {
