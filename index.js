@@ -146,6 +146,7 @@ client.on("interactionCreate", async (interaction) => {
 // 🚫 Anti-insultes
 let warns = {};
 client.on("messageCreate", async (message) => {
+  if (message.member.permissions.has("Administrator")) return;
   if (message.author.bot) return;
 
   const content = normalize(message.content);
