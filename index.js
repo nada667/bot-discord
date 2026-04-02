@@ -144,16 +144,32 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 // 🚫 Anti-insultes
+let warns = {};
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
   const content = normalize(message.content);
 
   if (badWords.some(word => content.includes(word))) {
+
     await message.delete().catch(() => {});
-    message.channel.send(`${message.author} 🚫 langage interdit`);
+
+    // ➜ ajouter warn
+    if (!warns[message.author.id]) warns[message.author.id] = 0;
+    warns[message.author.id]++;
+
+    message.channel.send(`⚠️ ${message.author} (${warns[message.author.id]}/3)`);
+
+    // ➜ sanction automatique
+    if (warns[message.author.id] >= 3) {
+      const member = message.guild.members.cache.get(message.author.id);
+
+      await member.timeout(5 * 60 * 1000); // 5 minutes
+      message.channel.send(`🔇 ${message.author.tag} a été mute 5 min`);
+
+      warns[message.author.id] = 0;
+    }
   }
 });
-
 // 🔑 Connexion
 client.login(process.env.TOKEN);
