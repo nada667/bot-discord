@@ -10,23 +10,11 @@ const {
 
 // 🔴 CONFIG
 const GUILD_ID = "1487893628729823465";
+const CATEGORY_ID = "MET_ID_CATEGORIE"; // ⚠️ MET ICI TON ID
 
 // 🧠 DATA
 let warns = {};
 let spam = {};
-
-// 🚫 INSULTES
-const badWords = [
-  "pute","connard","salope","fdp",
-  "fuck","shit","bitch","asshole",
-  "hmar","klb","zbi","9hab","zaml",
-  "ntm","tg","ftg"
-];
-
-// 🔧 NORMALIZE
-function normalize(text) {
-  return text.toLowerCase().replace(/[^a-z0-9]/g, "");
-}
 
 // 🤖 BOT
 const client = new Client({
@@ -43,43 +31,47 @@ client.once("ready", async () => {
 
   await client.application.commands.set([
     { name: "ping", description: "Test" },
-    { name: "ticket", description: "Créer un ticket" },
-    {
-      name: "warn",
-      description: "Warn",
-      options: [{ name: "user", type: 6, required: true }]
-    },
-    {
-      name: "ban",
-      description: "Ban",
-      options: [{ name: "user", type: 6, required: true }]
-    },
-    {
-      name: "kick",
-      description: "Kick",
-      options: [{ name: "user", type: 6, required: true }]
-    },
-    {
-      name: "mute",
-      description: "Mute",
-      options: [{ name: "user", type: 6, required: true }]
-    }
+    { name: "panel", description: "Créer panel ticket" }
   ], GUILD_ID);
 });
 
-// ⚡ COMMANDES + BOUTONS
+// ⚡ INTERACTIONS
 client.on("interactionCreate", async (interaction) => {
 
+  // 🧾 COMMANDES
   if (interaction.isChatInputCommand()) {
 
     if (interaction.commandName === "ping") {
       return interaction.reply("🏓 Pong");
     }
 
-    if (interaction.commandName === "ticket") {
+    // 🎫 PANEL
+    if (interaction.commandName === "panel") {
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId("open_ticket")
+          .setLabel("🎫 Ouvrir un ticket")
+          .setStyle(ButtonStyle.Primary)
+      );
+
+      return interaction.reply({
+        content: "🎫 Clique pour ouvrir un ticket",
+        components: [row]
+      });
+    }
+  }
+
+  // 🔘 BOUTONS
+  if (interaction.isButton()) {
+
+    // 🎫 OUVRIR
+    if (interaction.customId === "open_ticket") {
+
       const channel = await interaction.guild.channels.create({
         name: `ticket-${interaction.user.username}`,
         type: ChannelType.GuildText,
+        parent: CATEGORY_ID,
         permissionOverwrites: [
           { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
           { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] }
@@ -87,6 +79,11 @@ client.on("interactionCreate", async (interaction) => {
       });
 
       const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId("claim_ticket")
+          .setLabel("✅ Prendre")
+          .setStyle(ButtonStyle.Success),
+
         new ButtonBuilder()
           .setCustomId("close_ticket")
           .setLabel("❌ Fermer")
@@ -101,84 +98,28 @@ client.on("interactionCreate", async (interaction) => {
       return interaction.reply({ content: "✅ Ticket créé", ephemeral: true });
     }
 
-    if (interaction.commandName === "warn") {
-      const user = interaction.options.getUser("user");
-      if (!warns[user.id]) warns[user.id] = 0;
-      warns[user.id]++;
-      return interaction.reply(`⚠️ ${user.tag} (${warns[user.id]})`);
+    // ✅ PRENDRE
+    if (interaction.customId === "claim_ticket") {
+
+      if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
+        return interaction.reply({ content: "❌ Staff seulement", ephemeral: true });
+      }
+
+      return interaction.reply(`✅ ${interaction.user} a pris le ticket`);
     }
 
-    if (interaction.commandName === "ban") {
-      const member = interaction.guild.members.cache.get(interaction.options.getUser("user").id);
-      if (!member) return interaction.reply("❌ Introuvable");
-      await member.ban().catch(() => {});
-      return interaction.reply("🔨 Banni");
-    }
-
-    if (interaction.commandName === "kick") {
-      const member = interaction.guild.members.cache.get(interaction.options.getUser("user").id);
-      if (!member) return interaction.reply("❌ Introuvable");
-      await member.kick().catch(() => {});
-      return interaction.reply("👢 Expulsé");
-    }
-
-    if (interaction.commandName === "mute") {
-      const member = interaction.guild.members.cache.get(interaction.options.getUser("user").id);
-      if (!member) return interaction.reply("❌ Introuvable");
-      await member.timeout(10 * 60 * 1000).catch(() => {});
-      return interaction.reply("🔇 Muté");
-    }
-  }
-
-  if (interaction.isButton()) {
+    // ❌ FERMER
     if (interaction.customId === "close_ticket") {
-      await interaction.channel.delete();
+
+      if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
+        return interaction.reply({ content: "❌ Staff seulement", ephemeral: true });
+      }
+
+      await interaction.reply("🔒 Fermeture...");
+      setTimeout(() => {
+        interaction.channel.delete().catch(() => {});
+      }, 2000);
     }
-  }
-});
-
-// 🚫 ANTI-SPAM + INSULTES
-client.on("messageCreate", async (message) => {
-  if (message.author.bot) return;
-
-  const userId = message.author.id;
-
-  if (!spam[userId]) spam[userId] = { count: 0, last: Date.now() };
-
-  const now = Date.now();
-
-  if (now - spam[userId].last < 3000) {
-    spam[userId].count++;
-  } else {
-    spam[userId].count = 1;
-  }
-
-  spam[userId].last = now;
-
-  if (spam[userId].count >= 5) {
-    await message.delete().catch(() => {});
-    const member = message.guild.members.cache.get(userId);
-    await member.timeout(5 * 60 * 1000).catch(() => {});
-    spam[userId].count = 0;
-    return;
-  }
-
-  const content = normalize(message.content);
-
-  if (badWords.some(w => content.includes(w))) {
-    await message.delete().catch(() => {});
-
-    if (!warns[userId]) warns[userId] = 0;
-    warns[userId]++;
-
-    if (warns[userId] >= 3) {
-      const member = message.guild.members.cache.get(userId);
-      await member.timeout(5 * 60 * 1000).catch(() => {});
-      warns[userId] = 0;
-      return;
-    }
-
-    message.channel.send(`⚠️ ${message.author} (${warns[userId]}/3)`);
   }
 });
 
