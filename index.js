@@ -206,12 +206,20 @@ client.on("messageCreate", async (message) => {
   const userId = message.author.id;
   const content = normalize(message.content);
 
-  // 1️⃣ Liste locale
+  // 🔴 Liste locale
   const detectedLocal = badWords.some(word => content.includes(word));
 
-  // 2️⃣ IA
-  const analysis = await analyzeMessage(message.content);
-  const detectedIA = analysis.hate || analysis.harassment || analysis.violence;
+  // 🔴 Analyse IA seulement si mot suspect
+  let detectedIA = false;
+  if (!detectedLocal) {
+    try {
+      const analysis = await analyzeMessage(message.content);
+      detectedIA = analysis.hate || analysis.harassment || analysis.violence;
+    } catch (err) {
+      console.error("Erreur IA (non critique) :", err);
+      detectedIA = false;
+    }
+  }
 
   if (!detectedLocal && !detectedIA) return;
 
@@ -240,7 +248,7 @@ client.on("messageCreate", async (message) => {
 });
 
 // ========================
-// ANTI-CRASH
+// ANTI-CRASH GLOBAL
 // ========================
 process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
