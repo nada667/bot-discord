@@ -11,23 +11,27 @@ const GUILD_ID = "1487893628729823465";
 // 🧠 DATA
 let warns = {};
 
-// 🚫 LISTE INSULTES
+// 🚫 LISTE INSULTES (optimisée)
 const badWords = [
-  "pute","connard","salope","fdp",
-  "fuck","shit","bitch","asshole",
-  "hmar","klb","zbi","9hab","zaml",
-  "scheisse","arschloch","hurensohn",
+  "pute","connard","salope","encule","fdp",
+  "fuck","shit","bitch","asshole","bastard",
+  "zbi","klb","hmar","9hab","zaml","l7wa","9lawi",
   "puta","mierda","gilipollas",
-  "orospu","amk","salak",
-  "ntm","tg","ftg","mok","97ba","9lawi","nam","ptn","3zwa","l7wa","9ouwd","b9","w9","t9awd"
+  "scheisse","arschloch","hurensohn",
+  "orospu","amk","salak"
 ];
 
-// 🔧 NORMALIZE
+// 🔧 NORMALIZE (ANTI CONTOURNEMENT)
 function normalize(text) {
   return text
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[@4]/g, "a")
+    .replace(/[3]/g, "e")
+    .replace(/[1!]/g, "i")
+    .replace(/[0]/g, "o")
+    .replace(/[7]/g, "t")
     .replace(/[^a-z0-9]/g, "")
     .replace(/(.)\1+/g, "$1");
 }
@@ -82,12 +86,10 @@ client.on("interactionCreate", async (interaction) => {
 
   try {
 
-    // 🏓 PING
     if (interaction.commandName === "ping") {
       return interaction.reply("🏓 Pong !");
     }
 
-    // 🎫 TICKET
     if (interaction.commandName === "ticket") {
       const channel = await interaction.guild.channels.create({
         name: `ticket-${interaction.user.username}`,
@@ -131,8 +133,6 @@ client.on("interactionCreate", async (interaction) => {
       const user = interaction.options.getUser("user");
       const member = await interaction.guild.members.fetch(user.id);
 
-      if (!member) return interaction.reply({ content: "❌ Introuvable", ephemeral: true });
-
       await member.ban().catch(() => {});
       return interaction.reply(`🔨 ${user.tag} banni`);
     }
@@ -145,8 +145,6 @@ client.on("interactionCreate", async (interaction) => {
 
       const user = interaction.options.getUser("user");
       const member = await interaction.guild.members.fetch(user.id);
-
-      if (!member) return interaction.reply({ content: "❌ Introuvable", ephemeral: true });
 
       await member.kick().catch(() => {});
       return interaction.reply(`👢 ${user.tag} expulsé`);
@@ -161,8 +159,6 @@ client.on("interactionCreate", async (interaction) => {
       const user = interaction.options.getUser("user");
       const member = await interaction.guild.members.fetch(user.id);
 
-      if (!member) return interaction.reply({ content: "❌ Introuvable", ephemeral: true });
-
       await member.timeout(10 * 60 * 1000).catch(() => {});
       return interaction.reply(`🔇 ${user.tag} mute 10 min`);
     }
@@ -175,14 +171,17 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-// 🚫 ANTI-INSULTES
+// 🚫 ANTI-INSULTES INTELLIGENT
 client.on("messageCreate", async (message) => {
   if (!message.guild || message.author.bot) return;
 
   const userId = message.author.id;
   const content = normalize(message.content);
 
-  const found = badWords.find(word => content.includes(word));
+  const found = badWords.find(word => {
+    return content.includes(word) || content.match(new RegExp(word.split("").join(".*")));
+  });
+
   if (!found) return;
 
   try {
