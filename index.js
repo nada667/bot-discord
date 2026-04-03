@@ -22,7 +22,7 @@ let warns = {}; // Stockage des warns
 // ========================
 const badWords = [
   "fdp","ntm","ptn","enculé","salope","pute","connard",
-  "tg","ftg","clb","zbi","9hab","zaml","pédé","bâtard"
+  "tg","ftg","clb","zbi","9hab","zaml","pédé","bâtard","w9","b9","lah yn3l tbon mk","sir t9wd",
 ];
 
 // ========================
