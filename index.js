@@ -1,6 +1,17 @@
-const { Client, GatewayIntentBits, PermissionsBitField, ChannelType } = require("discord.js");
+const { 
+  Client, 
+  GatewayIntentBits, 
+  PermissionsBitField, 
+  ChannelType 
+} = require("discord.js");
 
-// 🧠 Liste des insultes
+// 🔴 CONFIG
+const GUILD_ID = "1487893628729823465";
+
+// 🧠 DATA
+let warns = {};
+
+// 🚫 LISTE INSULTES
 const badWords = [
   "pute","connard","salope","fdp",
   "fuck","shit","bitch","asshole",
@@ -11,7 +22,7 @@ const badWords = [
   "ntm","tg","ftg","mok","97ba","9lawi","nam","ptn","3zwa","l7wa","9ouwd","b9","w9","t9awd"
 ];
 
-// 🔧 Normalisation
+// 🔧 NORMALIZE
 function normalize(text) {
   return text
     .toLowerCase()
@@ -21,7 +32,7 @@ function normalize(text) {
     .replace(/(.)\1+/g, "$1");
 }
 
-// 🤖 Création du bot
+// 🤖 BOT
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -30,13 +41,7 @@ const client = new Client({
   ]
 });
 
-// 🔴 TON ID SERVEUR
-const GUILD_ID = "1487893628729823465";
-
-// 📊 Système de warn
-let warns = {};
-
-// ✅ Quand le bot démarre
+// ✅ READY
 client.once("ready", async () => {
   console.log("✅ Bot en ligne !");
 
@@ -47,14 +52,7 @@ client.once("ready", async () => {
     {
       name: "warn",
       description: "Warn un membre",
-      options: [
-        {
-          name: "user",
-          type: 6,
-          description: "Utilisateur",
-          required: true
-        }
-      ]
+      options: [{ name: "user", type: 6, required: true }]
     },
 
     {
@@ -78,18 +76,18 @@ client.once("ready", async () => {
   ], GUILD_ID);
 });
 
-// ⚡ COMMANDES SLASH
+// ⚡ COMMANDES
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
   try {
 
-    // 🏓 Ping
+    // 🏓 PING
     if (interaction.commandName === "ping") {
       return interaction.reply("🏓 Pong !");
     }
 
-    // 🎫 Ticket
+    // 🎫 TICKET
     if (interaction.commandName === "ticket") {
       const channel = await interaction.guild.channels.create({
         name: `ticket-${interaction.user.username}`,
@@ -112,6 +110,10 @@ client.on("interactionCreate", async (interaction) => {
 
     // ⚠️ WARN
     if (interaction.commandName === "warn") {
+      if (!interaction.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
+        return interaction.reply({ content: "❌ Pas la permission", ephemeral: true });
+      }
+
       const user = interaction.options.getUser("user");
 
       if (!warns[user.id]) warns[user.id] = 0;
@@ -123,13 +125,13 @@ client.on("interactionCreate", async (interaction) => {
     // 🔨 BAN
     if (interaction.commandName === "ban") {
       if (!interaction.member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
-        return interaction.reply("❌ Pas la permission");
+        return interaction.reply({ content: "❌ Pas la permission", ephemeral: true });
       }
 
       const user = interaction.options.getUser("user");
-      const member = interaction.guild.members.cache.get(user.id);
+      const member = await interaction.guild.members.fetch(user.id);
 
-      if (!member) return interaction.reply("❌ Introuvable");
+      if (!member) return interaction.reply({ content: "❌ Introuvable", ephemeral: true });
 
       await member.ban().catch(() => {});
       return interaction.reply(`🔨 ${user.tag} banni`);
@@ -138,13 +140,13 @@ client.on("interactionCreate", async (interaction) => {
     // 👢 KICK
     if (interaction.commandName === "kick") {
       if (!interaction.member.permissions.has(PermissionsBitField.Flags.KickMembers)) {
-        return interaction.reply("❌ Pas la permission");
+        return interaction.reply({ content: "❌ Pas la permission", ephemeral: true });
       }
 
       const user = interaction.options.getUser("user");
-      const member = interaction.guild.members.cache.get(user.id);
+      const member = await interaction.guild.members.fetch(user.id);
 
-      if (!member) return interaction.reply("❌ Introuvable");
+      if (!member) return interaction.reply({ content: "❌ Introuvable", ephemeral: true });
 
       await member.kick().catch(() => {});
       return interaction.reply(`👢 ${user.tag} expulsé`);
@@ -153,13 +155,13 @@ client.on("interactionCreate", async (interaction) => {
     // 🔇 MUTE
     if (interaction.commandName === "mute") {
       if (!interaction.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
-        return interaction.reply("❌ Pas la permission");
+        return interaction.reply({ content: "❌ Pas la permission", ephemeral: true });
       }
 
       const user = interaction.options.getUser("user");
-      const member = interaction.guild.members.cache.get(user.id);
+      const member = await interaction.guild.members.fetch(user.id);
 
-      if (!member) return interaction.reply("❌ Introuvable");
+      if (!member) return interaction.reply({ content: "❌ Introuvable", ephemeral: true });
 
       await member.timeout(10 * 60 * 1000).catch(() => {});
       return interaction.reply(`🔇 ${user.tag} mute 10 min`);
@@ -167,36 +169,50 @@ client.on("interactionCreate", async (interaction) => {
 
   } catch (err) {
     console.error(err);
-    interaction.reply("❌ Erreur");
+    if (!interaction.replied) {
+      interaction.reply({ content: "❌ Erreur", ephemeral: true });
+    }
   }
 });
 
 // 🚫 ANTI-INSULTES
 client.on("messageCreate", async (message) => {
-  if (message.author.bot) return;
+  if (!message.guild || message.author.bot) return;
 
+  const userId = message.author.id;
   const content = normalize(message.content);
 
-  if (badWords.some(word => content.includes(word))) {
+  const found = badWords.find(word => content.includes(word));
+  if (!found) return;
 
-    await message.delete().catch(() => {});
+  try {
+    await message.delete();
 
-    if (!warns[message.author.id]) warns[message.author.id] = 0;
-    warns[message.author.id]++;
+    if (!warns[userId]) warns[userId] = 0;
+    warns[userId]++;
 
-    if (warns[message.author.id] >= 3) {
-      const member = message.guild.members.cache.get(message.author.id);
+    const count = warns[userId];
 
-      await member.timeout(5 * 60 * 1000).catch(() => {});
-      message.channel.send(`🔇 ${message.author.tag} mute 5 min`);
+    if (count >= 3) {
+      const member = await message.guild.members.fetch(userId);
 
-      warns[message.author.id] = 0;
+      await member.timeout(5 * 60 * 1000, "Insultes");
+
+      await message.channel.send(`🔇 ${message.author.tag} mute 5 min`);
+      warns[userId] = 0;
       return;
     }
 
-    message.channel.send(`⚠️ ${message.author} (${warns[message.author.id]}/3)`);
+    await message.channel.send(`⚠️ ${message.author} (${count}/3)`);
+
+  } catch (err) {
+    console.error("Erreur anti-insultes :", err);
   }
 });
 
-// 🔑 Connexion
+// 🛑 ANTI CRASH
+process.on("unhandledRejection", console.error);
+process.on("uncaughtException", console.error);
+
+// 🔑 LOGIN
 client.login(process.env.TOKEN);
