@@ -21,7 +21,7 @@ let warns = {}; // Stockage des warns
 // LISTE DES INSULTES GRAVES
 // ========================
 const badWords = [
-  "fdp","ntm","ptn","enculé","salope","pute","connard",
+  "fdp","ntm","ptn","enculé","salope","pute","connard","put","connard","connasse","conne","couilles","cramouille","cul","emmerdant","emmerder","emmerdeur","emmerdeuse","enculé","enculée","enculeur","enculeurs","enfoiré","enfoirée","étron","fille de pute","fils de pute","foutre","gerbe","gerber","gouine","grogniasse","gueule","jouir","la putain de ta mère","MALPT","ménage à trois","merde","merdeuse","merdeux","nègre","negro","nique ta mère","nique ta race","palucher","pédé","pouffiasse","pousse-crotte","putain","pute","sac à foutre","sac à merde","salaud","salope","suce","tanche","teuch","tringler","trique","trou du cul","turlute","zigounette","zizi",
   "tg","ftg","clb","zbi","9hab","zaml","pédé","bâtard","w9","b9","lah yn3l tbon mk","sir t9wd",
 ];
 
