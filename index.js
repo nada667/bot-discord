@@ -5,36 +5,18 @@ const {
   ChannelType 
 } = require("discord.js");
 
+const OpenAI = require("openai");
+
 // 🔴 CONFIG
 const GUILD_ID = "1487893628729823465";
 
+// 🔑 IA
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
 // 🧠 DATA
 let warns = {};
-
-// 🚫 LISTE INSULTES (optimisée)
-const badWords = [
-  "pute","connard","salope","encule","fdp",
-  "fuck","shit","bitch","asshole","bastard",
-  "zbi","klb","hmar","9hab","zaml","l7wa","9lawi",
-  "puta","mierda","gilipollas",
-  "scheisse","arschloch","hurensohn",
-  "orospu","amk","salak"
-];
-
-// 🔧 NORMALIZE (ANTI CONTOURNEMENT)
-function normalize(text) {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[@4]/g, "a")
-    .replace(/[3]/g, "e")
-    .replace(/[1!]/g, "i")
-    .replace(/[0]/g, "o")
-    .replace(/[7]/g, "t")
-    .replace(/[^a-z0-9]/g, "")
-    .replace(/(.)\1+/g, "$1");
-}
 
 // 🤖 BOT
 const client = new Client({
@@ -45,9 +27,35 @@ const client = new Client({
   ]
 });
 
+// ========================
+// 🧠 IA DETECTION GRAVE
+// ========================
+async function analyzeMessage(text) {
+  try {
+    const response = await openai.moderations.create({
+      model: "omni-moderation-latest",
+      input: text
+    });
+
+    const result = response.results[0];
+
+    return {
+      hate: result.categories.hate,
+      harassment: result.categories.harassment,
+      violence: result.categories.violence
+    };
+
+  } catch (err) {
+    console.error("Erreur IA :", err);
+    return { hate: false, harassment: false, violence: false };
+  }
+}
+
+// ========================
 // ✅ READY
+// ========================
 client.once("ready", async () => {
-  console.log("✅ Bot en ligne !");
+  console.log("✅ Bot IA en ligne !");
 
   await client.application.commands.set([
     { name: "ping", description: "Test du bot" },
@@ -80,7 +88,9 @@ client.once("ready", async () => {
   ], GUILD_ID);
 });
 
+// ========================
 // ⚡ COMMANDES
+// ========================
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
@@ -95,14 +105,8 @@ client.on("interactionCreate", async (interaction) => {
         name: `ticket-${interaction.user.username}`,
         type: ChannelType.GuildText,
         permissionOverwrites: [
-          {
-            id: interaction.guild.id,
-            deny: [PermissionsBitField.Flags.ViewChannel]
-          },
-          {
-            id: interaction.user.id,
-            allow: [PermissionsBitField.Flags.ViewChannel]
-          }
+          { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+          { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] }
         ]
       });
 
@@ -171,41 +175,58 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-// 🚫 ANTI-INSULTES INTELLIGENT
+// ========================
+// 🚫 MODERATION IA
+// ========================
 client.on("messageCreate", async (message) => {
   if (!message.guild || message.author.bot) return;
 
   const userId = message.author.id;
-  const content = normalize(message.content);
 
-  const found = badWords.find(word => {
-    return content.includes(word) || content.match(new RegExp(word.split("").join(".*")));
-  });
+  const analysis = await analyzeMessage(message.content);
 
-  if (!found) return;
+  // 🔴 PROPOS HAINEUX = MUTE DIRECT
+  if (analysis.hate || analysis.violence) {
+    try {
+      await message.delete();
 
-  try {
-    await message.delete();
-
-    if (!warns[userId]) warns[userId] = 0;
-    warns[userId]++;
-
-    const count = warns[userId];
-
-    if (count >= 3) {
       const member = await message.guild.members.fetch(userId);
+      await member.timeout(10 * 60 * 1000, "Propos haineux");
 
-      await member.timeout(5 * 60 * 1000, "Insultes");
+      await message.channel.send(`🔴 ${message.author.tag} mute (propos grave)`);
 
-      await message.channel.send(`🔇 ${message.author.tag} mute 5 min`);
-      warns[userId] = 0;
-      return;
+    } catch (err) {
+      console.error(err);
     }
 
-    await message.channel.send(`⚠️ ${message.author} (${count}/3)`);
+    return;
+  }
 
-  } catch (err) {
-    console.error("Erreur anti-insultes :", err);
+  // ⚠️ ATTAQUE DIRECTE = WARN
+  if (analysis.harassment) {
+    try {
+      await message.delete();
+
+      if (!warns[userId]) warns[userId] = 0;
+      warns[userId]++;
+
+      const count = warns[userId];
+
+      if (count >= 3) {
+        const member = await message.guild.members.fetch(userId);
+
+        await member.timeout(5 * 60 * 1000, "Harcèlement");
+
+        await message.channel.send(`🔇 ${message.author.tag} mute`);
+        warns[userId] = 0;
+        return;
+      }
+
+      await message.channel.send(`⚠️ ${message.author} (${count}/3)`);
+
+    } catch (err) {
+      console.error(err);
+    }
   }
 });
 
