@@ -1,24 +1,76 @@
+// ========================
+// IMPORTS
+// ========================
 const { 
   Client, 
   GatewayIntentBits, 
   PermissionsBitField, 
-  ChannelType 
+  ChannelType, 
+  ActionRowBuilder, 
+  ButtonBuilder, 
+  ButtonStyle 
 } = require("discord.js");
-
 const OpenAI = require("openai");
 
-// 🔴 CONFIG
+// ========================
+// CONFIG
+// ========================
 const GUILD_ID = "1487893628729823465";
 
-// 🔑 IA
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+// ========================
+// OPENAI IA
+// ========================
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// 🧠 DATA
+// ========================
+// DATA
+// ========================
 let warns = {};
 
-// 🤖 BOT
+// ========================
+// LISTE LOCALE INSULTES GRAVES
+// ========================
+const badWords = [
+  "fdp","ntm","ptn","enculé","salope","pute","connard",
+  "tg","ftg","clb","zbi","9hab","zaml","pédé","bâtard"
+];
+
+// ========================
+// NORMALISATION ULTIME
+// ========================
+function normalize(text) {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // accents
+    .replace(/[^a-z0-9]/g, "")       // caractères spéciaux
+    .replace(/(.)\1+/g, "$1");       // lettres répétées
+}
+
+// ========================
+// ANALYSE IA
+// ========================
+async function analyzeMessage(text) {
+  try {
+    const response = await openai.moderations.create({
+      model: "omni-moderation-latest",
+      input: text
+    });
+    const result = response.results[0];
+    return {
+      hate: result.categories.hate,
+      harassment: result.categories.harassment,
+      violence: result.categories.violence
+    };
+  } catch (err) {
+    console.error("Erreur IA :", err);
+    return { hate: false, harassment: false, violence: false };
+  }
+}
+
+// ========================
+// CREATE BOT
+// ========================
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -28,78 +80,37 @@ const client = new Client({
 });
 
 // ========================
-// 🧠 IA DETECTION GRAVE
-// ========================
-async function analyzeMessage(text) {
-  try {
-    const response = await openai.moderations.create({
-      model: "omni-moderation-latest",
-      input: text
-    });
-
-    const result = response.results[0];
-
-    return {
-      hate: result.categories.hate,
-      harassment: result.categories.harassment,
-      violence: result.categories.violence
-    };
-
-  } catch (err) {
-    console.error("Erreur IA :", err);
-    return { hate: false, harassment: false, violence: false };
-  }
-}
-
-// ========================
-// ✅ READY
+// READY
 // ========================
 client.once("ready", async () => {
-  console.log("✅ Bot IA en ligne !");
+  console.log("✅ Bot ultime en ligne !");
 
+  // Slash commands
   await client.application.commands.set([
     { name: "ping", description: "Test du bot" },
     { name: "ticket", description: "Créer un ticket" },
-
-    {
-      name: "warn",
-      description: "Warn un membre",
-      options: [{ name: "user", type: 6, required: true }]
-    },
-
-    {
-      name: "ban",
-      description: "Ban un membre",
-      options: [{ name: "user", type: 6, required: true }]
-    },
-
-    {
-      name: "kick",
-      description: "Kick un membre",
-      options: [{ name: "user", type: 6, required: true }]
-    },
-
-    {
-      name: "mute",
-      description: "Mute un membre (10 min)",
-      options: [{ name: "user", type: 6, required: true }]
-    }
-
+    { name: "warn", description: "Warn un membre", options: [{ name: "user", type: 6, required: true }] },
+    { name: "ban", description: "Ban un membre", options: [{ name: "user", type: 6, required: true }] },
+    { name: "kick", description: "Kick un membre", options: [{ name: "user", type: 6, required: true }] },
+    { name: "mute", description: "Mute un membre (10 min)", options: [{ name: "user", type: 6, required: true }] }
   ], GUILD_ID);
 });
 
 // ========================
-// ⚡ COMMANDES
+// COMMANDES SLASH
 // ========================
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
   try {
+    const member = interaction.member;
 
+    // Ping
     if (interaction.commandName === "ping") {
       return interaction.reply("🏓 Pong !");
     }
 
+    // Ticket
     if (interaction.commandName === "ticket") {
       const channel = await interaction.guild.channels.create({
         name: `ticket-${interaction.user.username}`,
@@ -110,129 +121,131 @@ client.on("interactionCreate", async (interaction) => {
         ]
       });
 
-      await channel.send(`🎫 Ticket ouvert par ${interaction.user}`);
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId("close_ticket")
+          .setLabel("❌ Fermer")
+          .setStyle(ButtonStyle.Danger)
+      );
+
+      await channel.send({ content: `🎫 Ticket ouvert par ${interaction.user}`, components: [row] });
       return interaction.reply({ content: "✅ Ticket créé !", ephemeral: true });
     }
 
-    // ⚠️ WARN
+    // Warn
     if (interaction.commandName === "warn") {
-      if (!interaction.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
+      if (!member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
         return interaction.reply({ content: "❌ Pas la permission", ephemeral: true });
       }
 
       const user = interaction.options.getUser("user");
-
       if (!warns[user.id]) warns[user.id] = 0;
       warns[user.id]++;
 
       return interaction.reply(`⚠️ ${user.tag} a ${warns[user.id]} warn(s)`);
     }
 
-    // 🔨 BAN
+    // Ban
     if (interaction.commandName === "ban") {
-      if (!interaction.member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
+      if (!member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
         return interaction.reply({ content: "❌ Pas la permission", ephemeral: true });
       }
 
       const user = interaction.options.getUser("user");
-      const member = await interaction.guild.members.fetch(user.id);
-
-      await member.ban().catch(() => {});
+      const target = await interaction.guild.members.fetch(user.id);
+      await target.ban().catch(() => {});
       return interaction.reply(`🔨 ${user.tag} banni`);
     }
 
-    // 👢 KICK
+    // Kick
     if (interaction.commandName === "kick") {
-      if (!interaction.member.permissions.has(PermissionsBitField.Flags.KickMembers)) {
+      if (!member.permissions.has(PermissionsBitField.Flags.KickMembers)) {
         return interaction.reply({ content: "❌ Pas la permission", ephemeral: true });
       }
 
       const user = interaction.options.getUser("user");
-      const member = await interaction.guild.members.fetch(user.id);
-
-      await member.kick().catch(() => {});
+      const target = await interaction.guild.members.fetch(user.id);
+      await target.kick().catch(() => {});
       return interaction.reply(`👢 ${user.tag} expulsé`);
     }
 
-    // 🔇 MUTE
+    // Mute
     if (interaction.commandName === "mute") {
-      if (!interaction.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
+      if (!member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
         return interaction.reply({ content: "❌ Pas la permission", ephemeral: true });
       }
 
       const user = interaction.options.getUser("user");
-      const member = await interaction.guild.members.fetch(user.id);
-
-      await member.timeout(10 * 60 * 1000).catch(() => {});
+      const target = await interaction.guild.members.fetch(user.id);
+      await target.timeout(10 * 60 * 1000).catch(() => {});
       return interaction.reply(`🔇 ${user.tag} mute 10 min`);
     }
 
   } catch (err) {
     console.error(err);
-    if (!interaction.replied) {
-      interaction.reply({ content: "❌ Erreur", ephemeral: true });
-    }
+    if (!interaction.replied) interaction.reply({ content: "❌ Erreur", ephemeral: true });
   }
 });
 
 // ========================
-// 🚫 MODERATION IA
+// BUTTON TICKET CLOSE
+// ========================
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isButton()) return;
+  if (interaction.customId === "close_ticket") {
+    await interaction.channel.delete();
+  }
+});
+
+// ========================
+// MODERATION MESSAGES
 // ========================
 client.on("messageCreate", async (message) => {
   if (!message.guild || message.author.bot) return;
 
   const userId = message.author.id;
+  const content = normalize(message.content);
 
+  // 1️⃣ Liste locale
+  const detectedLocal = badWords.some(word => content.includes(word));
+
+  // 2️⃣ IA
   const analysis = await analyzeMessage(message.content);
+  const detectedIA = analysis.hate || analysis.harassment || analysis.violence;
 
-  // 🔴 PROPOS HAINEUX = MUTE DIRECT
-  if (analysis.hate || analysis.violence) {
-    try {
-      await message.delete();
+  if (!detectedLocal && !detectedIA) return;
 
+  try {
+    await message.delete();
+
+    if (!warns[userId]) warns[userId] = 0;
+    warns[userId]++;
+    const count = warns[userId];
+
+    // 🔴 Mute direct si IA ou liste locale
+    if (detectedIA || detectedLocal) {
       const member = await message.guild.members.fetch(userId);
-      await member.timeout(10 * 60 * 1000, "Propos haineux");
-
-      await message.channel.send(`🔴 ${message.author.tag} mute (propos grave)`);
-
-    } catch (err) {
-      console.error(err);
+      await member.timeout(10 * 60 * 1000, "Insulte grave");
+      await message.channel.send(`🔇 ${message.author.tag} mute (insulte grave)`);
+      warns[userId] = 0;
+      return;
     }
 
-    return;
-  }
+    // ⚠️ Warn normal
+    await message.channel.send(`⚠️ ${message.author} (${count}/3)`);
 
-  // ⚠️ ATTAQUE DIRECTE = WARN
-  if (analysis.harassment) {
-    try {
-      await message.delete();
-
-      if (!warns[userId]) warns[userId] = 0;
-      warns[userId]++;
-
-      const count = warns[userId];
-
-      if (count >= 3) {
-        const member = await message.guild.members.fetch(userId);
-
-        await member.timeout(5 * 60 * 1000, "Harcèlement");
-
-        await message.channel.send(`🔇 ${message.author.tag} mute`);
-        warns[userId] = 0;
-        return;
-      }
-
-      await message.channel.send(`⚠️ ${message.author} (${count}/3)`);
-
-    } catch (err) {
-      console.error(err);
-    }
+  } catch (err) {
+    console.error(err);
   }
 });
 
-// 🛑 ANTI CRASH
+// ========================
+// ANTI-CRASH
+// ========================
 process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
 
-// 🔑 LOGIN
+// ========================
+// LOGIN
+// ========================
 client.login(process.env.TOKEN);
