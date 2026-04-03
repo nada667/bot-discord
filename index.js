@@ -10,25 +10,15 @@ const {
   ButtonBuilder, 
   ButtonStyle 
 } = require("discord.js");
-const OpenAI = require("openai");
 
 // ========================
 // CONFIG
 // ========================
 const GUILD_ID = "1487893628729823465";
+let warns = {}; // Stockage des warns
 
 // ========================
-// OPENAI IA
-// ========================
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-// ========================
-// DATA
-// ========================
-let warns = {};
-
-// ========================
-// LISTE LOCALE INSULTES GRAVES
+// LISTE DES INSULTES GRAVES
 // ========================
 const badWords = [
   "fdp","ntm","ptn","enculé","salope","pute","connard",
@@ -36,7 +26,7 @@ const badWords = [
 ];
 
 // ========================
-// NORMALISATION ULTIME
+// NORMALISATION DES MESSAGES
 // ========================
 function normalize(text) {
   return text
@@ -48,44 +38,22 @@ function normalize(text) {
 }
 
 // ========================
-// ANALYSE IA
-// ========================
-async function analyzeMessage(text) {
-  try {
-    const response = await openai.moderations.create({
-      model: "omni-moderation-latest",
-      input: text
-    });
-    const result = response.results[0];
-    return {
-      hate: result.categories.hate,
-      harassment: result.categories.harassment,
-      violence: result.categories.violence
-    };
-  } catch (err) {
-    console.error("Erreur IA :", err);
-    return { hate: false, harassment: false, violence: false };
-  }
-}
-
-// ========================
-// CREATE BOT
+// CREATION DU BOT
 // ========================
 const client = new Client({
   intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.Guilds, 
+    GatewayIntentBits.GuildMessages, 
     GatewayIntentBits.MessageContent
   ]
 });
 
 // ========================
-// READY
+// BOT EN LIGNE
 // ========================
 client.once("ready", async () => {
-  console.log("✅ Bot ultime en ligne !");
+  console.log("✅ Bot en ligne !");
 
-  // Slash commands
   await client.application.commands.set([
     { name: "ping", description: "Test du bot" },
     { name: "ticket", description: "Créer un ticket" },
@@ -104,11 +72,10 @@ client.on("interactionCreate", async (interaction) => {
 
   try {
     const member = interaction.member;
+    const user = interaction.options.getUser("user");
 
     // Ping
-    if (interaction.commandName === "ping") {
-      return interaction.reply("🏓 Pong !");
-    }
+    if (interaction.commandName === "ping") return interaction.reply("🏓 Pong !");
 
     // Ticket
     if (interaction.commandName === "ticket") {
@@ -120,38 +87,26 @@ client.on("interactionCreate", async (interaction) => {
           { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] }
         ]
       });
-
       const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId("close_ticket")
-          .setLabel("❌ Fermer")
-          .setStyle(ButtonStyle.Danger)
+        new ButtonBuilder().setCustomId("close_ticket").setLabel("❌ Fermer").setStyle(ButtonStyle.Danger)
       );
-
       await channel.send({ content: `🎫 Ticket ouvert par ${interaction.user}`, components: [row] });
       return interaction.reply({ content: "✅ Ticket créé !", ephemeral: true });
     }
 
     // Warn
     if (interaction.commandName === "warn") {
-      if (!member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
+      if (!member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) 
         return interaction.reply({ content: "❌ Pas la permission", ephemeral: true });
-      }
-
-      const user = interaction.options.getUser("user");
       if (!warns[user.id]) warns[user.id] = 0;
       warns[user.id]++;
-
       return interaction.reply(`⚠️ ${user.tag} a ${warns[user.id]} warn(s)`);
     }
 
     // Ban
     if (interaction.commandName === "ban") {
-      if (!member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
+      if (!member.permissions.has(PermissionsBitField.Flags.BanMembers)) 
         return interaction.reply({ content: "❌ Pas la permission", ephemeral: true });
-      }
-
-      const user = interaction.options.getUser("user");
       const target = await interaction.guild.members.fetch(user.id);
       await target.ban().catch(() => {});
       return interaction.reply(`🔨 ${user.tag} banni`);
@@ -159,11 +114,8 @@ client.on("interactionCreate", async (interaction) => {
 
     // Kick
     if (interaction.commandName === "kick") {
-      if (!member.permissions.has(PermissionsBitField.Flags.KickMembers)) {
+      if (!member.permissions.has(PermissionsBitField.Flags.KickMembers)) 
         return interaction.reply({ content: "❌ Pas la permission", ephemeral: true });
-      }
-
-      const user = interaction.options.getUser("user");
       const target = await interaction.guild.members.fetch(user.id);
       await target.kick().catch(() => {});
       return interaction.reply(`👢 ${user.tag} expulsé`);
@@ -171,11 +123,8 @@ client.on("interactionCreate", async (interaction) => {
 
     // Mute
     if (interaction.commandName === "mute") {
-      if (!member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
+      if (!member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) 
         return interaction.reply({ content: "❌ Pas la permission", ephemeral: true });
-      }
-
-      const user = interaction.options.getUser("user");
       const target = await interaction.guild.members.fetch(user.id);
       await target.timeout(10 * 60 * 1000).catch(() => {});
       return interaction.reply(`🔇 ${user.tag} mute 10 min`);
@@ -188,13 +137,11 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 // ========================
-// BUTTON TICKET CLOSE
+// BOUTON FERMER TICKET
 // ========================
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isButton()) return;
-  if (interaction.customId === "close_ticket") {
-    await interaction.channel.delete();
-  }
+  if (interaction.customId === "close_ticket") await interaction.channel.delete();
 });
 
 // ========================
@@ -202,48 +149,23 @@ client.on("interactionCreate", async (interaction) => {
 // ========================
 client.on("messageCreate", async (message) => {
   if (!message.guild || message.author.bot) return;
-
-  const userId = message.author.id;
   const content = normalize(message.content);
+  const userId = message.author.id;
 
-  // 🔴 Liste locale
-  const detectedLocal = badWords.some(word => content.includes(word));
-
-  // 🔴 Analyse IA seulement si mot suspect
-  let detectedIA = false;
-  if (!detectedLocal) {
+  if (badWords.some(word => content.includes(word))) {
     try {
-      const analysis = await analyzeMessage(message.content);
-      detectedIA = analysis.hate || analysis.harassment || analysis.violence;
-    } catch (err) {
-      console.error("Erreur IA (non critique) :", err);
-      detectedIA = false;
-    }
-  }
+      await message.delete();
+      if (!warns[userId]) warns[userId] = 0;
+      warns[userId]++;
+      const count = warns[userId];
 
-  if (!detectedLocal && !detectedIA) return;
-
-  try {
-    await message.delete();
-
-    if (!warns[userId]) warns[userId] = 0;
-    warns[userId]++;
-    const count = warns[userId];
-
-    // 🔴 Mute direct si IA ou liste locale
-    if (detectedIA || detectedLocal) {
       const member = await message.guild.members.fetch(userId);
       await member.timeout(10 * 60 * 1000, "Insulte grave");
       await message.channel.send(`🔇 ${message.author.tag} mute (insulte grave)`);
       warns[userId] = 0;
-      return;
+    } catch (err) {
+      console.error(err);
     }
-
-    // ⚠️ Warn normal
-    await message.channel.send(`⚠️ ${message.author} (${count}/3)`);
-
-  } catch (err) {
-    console.error(err);
   }
 });
 
